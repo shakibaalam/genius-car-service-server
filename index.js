@@ -4,6 +4,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const cors = require('cors');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 
 //middleware from express.js
 app.use(cors());
@@ -20,6 +21,16 @@ async function run() {
     try {
         await client.connect();
         const serviceCollection = client.db('genius-car').collection('service');
+        const orderCollection = client.db('genius-car').collection('order');
+
+        //auth jwt token
+        app.post('/login', async (req, res) => {
+            const user = req.body;
+            console.log(user);
+            var token = jwt.sign(user, process.env.TOKEN_SECRET, { expire: '1y' });
+            res.send({ token });
+        });
+
         //find multiple
         app.get('/service', async (req, res) => {
             const query = {};
@@ -49,6 +60,25 @@ async function run() {
             const query = { _id: ObjectId(id) };
             const result = await serviceCollection.deleteOne(query);
             res.send(result);
+        });
+
+        //order collection api
+
+        //get all order
+        app.get('/order', async (req, res) => {
+            const email = req.query.email;
+            const query = email;
+            const cursor = orderCollection.find(query);
+            const orders = await cursor.toArray();
+            res.send(orders);
+        });
+
+        //book order
+        app.post('/order', async (req, res) => {
+            const order = req.body;
+            console.log(order);
+            const result = await orderCollection.insertOne(order);
+            res.send(result)
         })
 
     } finally {
